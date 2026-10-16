@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>软件下载中心</title>
+  <meta name="theme-color" content="#0e7a4f">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- 登录 / 注册 -->
+  <section id="auth-view" class="auth-view" hidden>
+    <div class="auth-card">
+      <div class="auth-logo">⬇️</div>
+      <h1>软件下载中心</h1>
+      <p class="auth-sub">注册 · 开通会员 · 随时下载</p>
+      <form id="auth-form" autocomplete="on">
+        <input id="auth-email" type="email" placeholder="邮箱" required autocomplete="email">
+        <input id="auth-password" type="password" placeholder="密码（至少 6 位）" required minlength="6"
+               autocomplete="current-password">
+        <button id="auth-submit" type="submit" class="btn primary block">登录</button>
+      </form>
+      <p class="auth-switch" id="auth-switch">还没有账号？<a href="#" id="auth-toggle">注册一个</a></p>
+    </div>
+  </section>
+
+  <!-- 主界面 -->
+  <div id="app-view" hidden>
+    <header class="hero">
+      <div class="hero-inner">
+        <div class="hero-title">
+          <h1>⬇️ 软件下载中心</h1>
+          <p class="hero-sub">
+            <span id="user-email"></span>
+            <span class="sep">·</span>
+            <span id="member-badge" class="badge-vip">未开通</span>
+          </p>
+        </div>
+        <div class="hero-actions">
+          <button id="logout-btn" class="btn ghost" type="button">退出</button>
+        </div>
+      </div>
+      <nav class="tabs" id="tabs">
+        <button class="tab on" data-tab="store" type="button">下载中心</button>
+        <button class="tab" data-tab="me" type="button">我的会员</button>
+        <button class="tab admin-only" data-tab="admin" type="button" hidden>管理后台</button>
+      </nav>
+    </header>
+
+    <main class="wrap">
+      <!-- 下载中心 -->
+      <section id="tab-store" class="tabpanel">
+        <div id="store-tip" class="tip"></div>
+        <div id="release-list" class="list"></div>
+      </section>
+
+      <!-- 我的会员 -->
+      <section id="tab-me" class="tabpanel" hidden>
+        <div class="card member-card">
+          <div class="member-row"><span>账号</span><b id="me-email">-</b></div>
+          <div class="member-row"><span>会员状态</span><b id="me-status">-</b></div>
+          <div class="member-row"><span>到期时间</span><b id="me-expiry">-</b></div>
+          <div class="member-row"><span>剩余天数</span><b id="me-days">-</b></div>
+        </div>
+        <div class="card redeem-card">
+          <h3>🔑 激活码开通 / 续费</h3>
+          <p class="muted">购买后获得激活码（如 ABCD-EFGH-1234），输入即可开通或延长会员，可叠加。</p>
+          <form id="redeem-form" class="redeem-row">
+            <input id="redeem-code" placeholder="输入激活码" required>
+            <button type="submit" class="btn primary" id="redeem-btn">激活</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- 管理后台 -->
+      <section id="tab-admin" class="tabpanel" hidden>
+        <div class="admin-section">
+          <h3>📤 发布新版本</h3>
+          <form id="publish-form">
+            <div class="form-grid">
+              <div><label>软件名称 *</label><input id="p-software" required placeholder="例如：EasyCut"></div>
+              <div><label>版本号 *</label><input id="p-version" required placeholder="例如：1.0.0"></div>
+            </div>
+            <label>更新说明</label>
+            <textarea id="p-notes" rows="2" placeholder="本次更新了什么…"></textarea>
+            <label>安装包文件（≤500MB）*</label>
+            <input id="p-file" type="file" required>
+            <button type="submit" class="btn primary" id="publish-btn">发布</button>
+          </form>
+        </div>
+
+        <div class="admin-section">
+          <h3>🗂️ 已发布的版本</h3>
+          <div id="admin-releases" class="list"></div>
+        </div>
+
+        <div class="admin-section">
+          <h3>🎟️ 生成激活码</h3>
+          <form id="codes-form" class="form-grid">
+            <div><label>数量</label><input id="c-count" type="number" min="1" max="100" value="10" required></div>
+            <div><label>会员天数 / 张</label><input id="c-days" type="number" min="1" max="3650" value="30" required></div>
+            <div><label>备注</label><input id="c-note" placeholder="例如：首批内测"></div>
+          </form>
+          <button type="button" class="btn primary" id="gen-codes-btn">生成</button>
+          <div id="new-codes" class="code-grid" hidden></div>
+          <button id="copy-codes-btn" class="btn ghost small" type="button" hidden>复制全部新码</button>
+          <h3 style="margin-top:18px">已有激活码</h3>
+          <div id="existing-codes" class="list"></div>
+        </div>
+
+        <div class="admin-section">
+          <h3>👥 会员列表</h3>
+          <div id="member-list" class="list"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="supabase.js"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,21 +1,11 @@
 -- ============================================================
--- 会员下载门户 · 初始化 SQL
+-- 会员下载门户 · 初始化 SQL（v2 修正版：先建表后建函数）
 --
 -- 用法：Supabase 控制台 → SQL Editor → New query
---       → 把最下面「管理员邮箱」改成你自己注册用的邮箱
---       → 粘贴全部 → Run
+--       → 粘贴全部 → Run（可重复运行，不会冲突）
 -- ============================================================
 
--- 0. 管理员判断函数（安全定义者，绕过 RLS）--------------------
-create or replace function public.is_admin ()
-returns boolean
-language sql stable security definer
-set search_path = public
-as $$
-  select exists (select 1 from public.admins where email = auth.jwt() ->> 'email');
-$$;
-
--- 1. 管理员名单 ------------------------------------------------
+-- 1. 管理员名单（必须先于 is_admin 函数创建）------------------
 create table if not exists public.admins (
   email text primary key
 );
@@ -25,7 +15,16 @@ create policy "admins_self_read"
   on public.admins for select
   using (email = auth.jwt() ->> 'email');
 
--- 2. 软件发布表 ------------------------------------------------
+-- 2. 管理员判断函数（安全定义者，绕过 RLS）--------------------
+create or replace function public.is_admin ()
+returns boolean
+language sql stable security definer
+set search_path = public
+as $$
+  select exists (select 1 from public.admins where email = auth.jwt() ->> 'email');
+$$;
+
+-- 3. 软件发布表 ------------------------------------------------
 create table if not exists public.releases (
   id           uuid primary key default gen_random_uuid(),
   software     text not null,
@@ -55,7 +54,7 @@ create policy "releases_admin_delete"
   on public.releases for delete
   using (is_admin());
 
--- 3. 会员表（每个注册用户一行，过期时间即会员有效期）----------
+-- 4. 会员表（每个注册用户一行，过期时间即会员有效期）----------
 create table if not exists public.memberships (
   user_id    uuid primary key references auth.users (id) on delete cascade,
   email      text not null default '',
@@ -97,7 +96,7 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user ();
 
--- 4. 激活码表（客户不可查询，只能兑换）------------------------
+-- 5. 激活码表（客户不可查询，只能兑换）------------------------
 create table if not exists public.license_codes (
   code       text primary key,
   days       int not null default 30,
@@ -114,7 +113,7 @@ create policy "codes_admin_all"
   using (is_admin())
   with check (is_admin());
 
--- 5. 下载日志 --------------------------------------------------
+-- 6. 下载日志 --------------------------------------------------
 create table if not exists public.download_logs (
   id         bigint generated always as identity primary key,
   user_id    uuid not null references auth.users (id) on delete cascade,
@@ -132,7 +131,7 @@ create policy "dlog_read"
   on public.download_logs for select
   using (auth.uid() = user_id or is_admin());
 
--- 6. 激活码兑换函数（原子操作：核销码 + 延长会员）--------------
+-- 7. 激活码兑换函数（原子操作：核销码 + 延长会员）--------------
 create or replace function public.redeem_code (p_code text)
 returns timestamptz
 language plpgsql security definer
@@ -189,7 +188,7 @@ begin
 end;
 $$;
 
--- 7. 发布文件存储桶（私有 · 会员才能生成下载链接）--------------
+-- 8. 发布文件存储桶（私有 · 会员才能生成下载链接）--------------
 insert into storage.buckets (id, name, public, file_size_limit)
 values ('releases', 'releases', false, 524288000)
 on conflict (id) do update set file_size_limit = 524288000;

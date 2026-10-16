@@ -136,6 +136,8 @@ label { display: block; font-size: 12.5px; color: var(--muted); margin: 10px 2px
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
 .form-grid .full { grid-column: 1 / -1; }
 #publish-form .btn, #codes-form + .btn { margin-top: 14px; }
+.progress { height: 10px; background: var(--accent-soft); border-radius: 999px; overflow: hidden; margin-top: 12px; }
+.progress .bar { height: 100%; width: 0%; background: var(--accent); transition: width .3s; }
 .code-grid {
   margin-top: 14px; display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
   gap: 8px; font-family: Consolas, Menlo, monospace; font-size: 13.5px;

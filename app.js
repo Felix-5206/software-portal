@@ -280,20 +280,57 @@ async function publishRelease(e) {
   if (file.size > 500 * 1024 * 1024) return toast('文件超过 500MB 上限', true, 5000);
 
   const btn = $('#publish-btn');
-  btn.disabled = true; btn.textContent = '上传中…';
+  const bar = document.querySelector('#p-progress .bar');
+  const pText = $('#p-progress-text');
+  btn.disabled = true; btn.textContent = '发布中…';
+  bar.style.width = '0%';
+  show('#p-progress'); show('#p-progress-text');
   try {
     const safe = file.name.replace(/[\\/:*?"<>|]+/g, '_');
     const path = `${software}/${version}_${Date.now()}_${safe}`;
-    const { error: upErr } = await sb.storage.from('releases').upload(path, file, { cacheControl: '3600' });
-    if (upErr) return toast('上传失败：' + upErr.message, true, 6000);
+
+    // 带进度的直传（supabase-js 的 upload 没有进度回调，改用 XHR 走同一存储接口）
+    const { data: sData } = await sb.auth.getSession();
+    const token = sData && sData.session ? sData.session.access_token : '';
+    const encPath = path.split('/').map(encodeURIComponent).join('/');
+    await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${cfg.url}/storage/v1/object/releases/${encPath}`, true);
+      xhr.setRequestHeader('apikey', cfg.anonKey);
+      xhr.setRequestHeader('authorization', 'Bearer ' + token);
+      xhr.setRequestHeader('x-upsert', 'false');
+      xhr.setRequestHeader('cache-control', '3600');
+      xhr.upload.onprogress = (ev) => {
+        if (!ev.lengthComputable) return;
+        const pct = Math.round((ev.loaded / ev.total) * 100);
+        bar.style.width = pct + '%';
+        pText.textContent = `上传中 ${pct}%（${(ev.loaded / 1048576).toFixed(1)} / ${(ev.total / 1048576).toFixed(1)} MB）… 上传期间请不要关闭页面`;
+      };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) return resolve();
+        let msg = 'HTTP ' + xhr.status;
+        try { msg = JSON.parse(xhr.responseText).message || msg; } catch (_) {}
+        reject(new Error(msg));
+      };
+      xhr.onerror = () => reject(new Error('网络中断，请重试'));
+      xhr.send(file);
+    });
 
     const { error } = await sb.from('releases')
       .insert({ software, version, notes, file_path: path, file_size: file.size });
-    if (error) return toast('发布失败：' + error.message, true, 6000);
+    if (error) return toast('发布失败：' + error.message, true, 8000);
 
     $('#p-software').value = ''; $('#p-version').value = ''; $('#p-notes').value = ''; fileInput.value = '';
+    hide('#p-progress'); hide('#p-progress-text');
     await loadReleases();
-    toast('发布成功 ✓ 客户端已可见');
+    toast('发布成功 ✓ 客户端已可见', false, 4000);
+  } catch (err) {
+    const m = (err.message || '').toLowerCase();
+    if (m.includes('exceeded') || m.includes('size') || err.message.includes('413')) {
+      toast('被 Supabase 单文件上限拦住了：Storage → Settings → 把 File upload size limit 调大（建议 5000MB）后重试', true, 10000);
+    } else {
+      toast('上传失败：' + err.message, true, 8000);
+    }
   } finally {
     btn.disabled = false; btn.textContent = '发布';
   }

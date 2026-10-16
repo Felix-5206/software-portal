@@ -208,7 +208,7 @@ create policy "rel_admin_all"
   with check (bucket_id = 'releases' and public.is_admin ());
 
 -- ============================================================
--- ★★★ 管理员邮箱（把下面引号里改成你注册门户要用的邮箱）★★★
+-- ★★★ 管理员邮箱（已填好：gongnicole520@gmail.com）★★★
 -- ============================================================
-insert into public.admins (email) values ('这里改成你的邮箱')
+insert into public.admins (email) values ('gongnicole520@gmail.com')
 on conflict (email) do nothing;
